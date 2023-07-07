@@ -1,8 +1,8 @@
-from elasticsearch import Elasticsearch, RequestsHttpConnection
-from requests_aws4auth import AWS4Auth
+from elasticsearch import Elasticsearch
 import boto3
 
-dynamodb = boto3.resource("dynamodb")
+session = boto3.Session(region_name="us-east-1")
+dynamodb = session.resource("dynamodb")
 table = dynamodb.Table("yelp-restaurants")
 response = table.scan()
 restaurants = []
@@ -13,24 +13,11 @@ for item in response["Items"]:
     }
     restaurants.append(restaurant)
 
-
 host = "https://search-restaurants-es-wegtnplh3c565avrppxyu57ury.us-east-1.es.amazonaws.com"
-region = "us-east-1"
-service = "es"
-credentials = boto3.Session().get_credentials()
-awsauth = AWS4Auth(
-    credentials.access_key,
-    credentials.secret_key,
-    region,
-    service,
-    session_token=credentials.token,
-)
 es = Elasticsearch(
     hosts=[{"host": host, "port": 443}],
-    http_auth=awsauth,
     use_ssl=True,
     verify_certs=True,
-    connection_class=RequestsHttpConnection,
 )
 
 mapping = {
@@ -42,8 +29,25 @@ mapping = {
     }
 }
 
-if not es.indices.exists("restaurants"):
-    es.indices.create(index="restaurants", body=mapping)
+index_name = "restaurants"
 
+es.indices.create(index=index_name, body=mapping)
+
+actions = []
+
+# Iterate over the restaurants and create index actions for each
 for restaurant in restaurants:
-    es.index(index="restaurants", body=restaurant)
+    action = {
+        "_index": index_name,
+        "_source": restaurant,
+    }
+    actions.append(action)
+
+response = es.bulk(index=index_name, body=actions, refresh=True)
+
+if response["errors"]:
+    for item in response["items"]:
+        if "error" in item["index"]:
+            print(f"Failed to index restaurant: {item['index']['_id']}")
+else:
+    print("All restaurants indexed successfully.")
