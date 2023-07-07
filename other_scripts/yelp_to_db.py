@@ -4,20 +4,14 @@ import time
 from datetime import datetime
 from decimal import Decimal
 
-# create a session
 session = boto3.Session(region_name="us-east-1")
-
-# create a resource for dynamodb
 dynamodb = session.resource("dynamodb")
-
-# table reference
 table = dynamodb.Table("yelp-restaurants")
 
-# Yelp API Key
 api_key = "kiki"
 headers = {"Authorization": "Bearer %s" % api_key}
 
-# list of cuisines. Should map one to one to Lex custom CousineType.
+# Must map one to one to Lex custom CousineType.
 cuisines = [
     "Chinese",
     "Mexican",
@@ -49,7 +43,6 @@ for cuisine in cuisines:
             + f"&limit=50&offset={offset}"
         )
         response = requests.get(url, headers=headers)
-
         if response.status_code == 200:
             businesses = response.json()["businesses"]
             print(f"Received {len(businesses)} businesses for {cuisine}")
@@ -72,7 +65,6 @@ for cuisine in cuisines:
                     "insertedAtTimestamp": datetime.now().isoformat(),
                 }
                 print(f"Inserting item {counter} for {cuisine}")
-                # insert the item into dynamodb
                 try:
                     table.put_item(Item=item)
                     print(f"Successfully inserted item {counter} for {cuisine}")
@@ -81,4 +73,5 @@ for cuisine in cuisines:
 
         else:
             print(f"Request failed with status code {response.status_code}")
+        # Yelp will rate limit anyways. Reduce chances of entries dropped.
         time.sleep(1)
