@@ -1,7 +1,6 @@
 import json
 import boto3
 import datetime
-from json import JSONDecodeError
 import uuid
 
 session_id = str(uuid.uuid4())
@@ -10,7 +9,6 @@ lex_client = boto3.client("lexv2-runtime")
 
 
 def lambda_handler(event, context):
-    # Check if messages are in the event and if the first message contains 'unstructured' with 'text'
     if (
         "messages" in event
         and len(event["messages"]) > 0
@@ -25,27 +23,25 @@ def lambda_handler(event, context):
             sessionId=session_id,
             text=user_message,
         )
-        bot_response = response["messages"][0]["content"]
+        messages = response.get("messages", [])
+        bot_responses = [
+            {
+                "type": "response",
+                "unstructured": {
+                    "id": str(i + 1),
+                    "text": msg.get("content", ""),
+                    "timestamp": str(datetime.datetime.now()),
+                },
+            }
+            for i, msg in enumerate(messages)
+        ]
 
         return {
             "statusCode": 200,
             "headers": {
                 "Access-Control-Allow-Origin": "*",
             },
-            "body": json.dumps(
-                {
-                    "messages": [
-                        {
-                            "type": "response",
-                            "unstructured": {
-                                "id": "1",
-                                "text": bot_response,
-                                "timestamp": str(datetime.datetime.now()),
-                            },
-                        }
-                    ]
-                }
-            ),
+            "body": json.dumps({"messages": bot_responses}),
         }
     else:
         return {
