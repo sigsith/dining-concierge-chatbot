@@ -5,32 +5,39 @@ from json import JSONDecodeError
 
 
 def lambda_handler(event, context):
-    try:
-        body = json.loads(event["body"])
-        message = body["messages"][0]["unstructured"]["text"]
-        # if everything goes well, respond with the message received
-        response_message = "Received: " + message
-    except (json.JSONDecodeError, KeyError):
-        # if something goes wrong, respond with an error message
-        response_message = "Request body is missing or malformed"
-
-    return {
-        "statusCode": 200,
-        "headers": {
-            "Access-Control-Allow-Origin": "*",
-        },
-        "body": json.dumps(
-            {
-                "messages": [
-                    {
-                        "type": "response",
-                        "unstructured": {
-                            "id": "1",
-                            "text": response_message,
-                            "timestamp": str(datetime.datetime.now()),
-                        },
-                    }
-                ]
-            }
-        ),
-    }
+    # Check if messages are in the event and if the first message contains 'unstructured' with 'text'
+    if (
+        "messages" in event
+        and len(event["messages"]) > 0
+        and "unstructured" in event["messages"][0]
+        and "text" in event["messages"][0]["unstructured"]
+    ):
+        user_message = event["messages"][0]["unstructured"]["text"]
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+            },
+            "body": json.dumps(
+                {
+                    "messages": [
+                        {
+                            "type": "response",
+                            "unstructured": {
+                                "id": "1",
+                                "text": f"Received message: {user_message}",
+                                "timestamp": str(datetime.datetime.now()),
+                            },
+                        }
+                    ]
+                }
+            ),
+        }
+    else:
+        return {
+            "statusCode": 400,
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+            },
+            "body": json.dumps({"error": "Invalid request format"}),
+        }
