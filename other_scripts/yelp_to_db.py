@@ -41,7 +41,7 @@ cuisines = [
 for cuisine in cuisines:
     counter = 0
     print(f"Getting data for {cuisine}")
-    for offset in range(0, 1000, 50):
+    for offset in range(0, 1200, 50):
         url = (
             "https://api.yelp.com/v3/businesses/search?location=Manhattan&term="
             + cuisine
@@ -60,6 +60,7 @@ for cuisine in cuisines:
                 item = {
                     "Business ID": business["id"],
                     "Name": business["name"],
+                    "Cuisine Type": cuisine,
                     "Address": " ".join(business["location"]["display_address"]),
                     "Coordinates": {
                         "latitude": Decimal(str(business["coordinates"]["latitude"])),
