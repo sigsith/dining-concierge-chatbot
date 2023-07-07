@@ -2,6 +2,11 @@ import json
 import boto3
 import datetime
 from json import JSONDecodeError
+import uuid
+
+session_id = str(uuid.uuid4())
+
+lex_client = boto3.client("lexv2-runtime")
 
 
 def lambda_handler(event, context):
@@ -13,6 +18,15 @@ def lambda_handler(event, context):
         and "text" in event["messages"][0]["unstructured"]
     ):
         user_message = event["messages"][0]["unstructured"]["text"]
+        response = lex_client.recognize_text(
+            botId="VEO07ZG2RX",
+            botAliasId="TSTALIASID",
+            localeId="en_US",
+            sessionId=session_id,
+            text=user_message,
+        )
+        bot_response = response["messages"][0]["content"]
+
         return {
             "statusCode": 200,
             "headers": {
@@ -25,7 +39,7 @@ def lambda_handler(event, context):
                             "type": "response",
                             "unstructured": {
                                 "id": "1",
-                                "text": f"Received message: {user_message}",
+                                "text": bot_response,
                                 "timestamp": str(datetime.datetime.now()),
                             },
                         }
